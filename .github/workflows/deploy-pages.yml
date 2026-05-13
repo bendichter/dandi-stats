@@ -1,0 +1,64 @@
+name: Build stats and deploy to GitHub Pages
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: 3.11
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run dandi_stats.py
+      env:
+        DANDI_API_KEY: ${{ secrets.DANDI_API_KEY }}
+      run: python src/dandi_stats.py
+
+    - name: Stage site
+      run: |
+        mkdir -p _site
+        cp src/index.html _site/
+        cp src/summary_timeseries.csv _site/
+        cp src/summary_sizes.csv _site/
+        cp src/summary_subjects.csv _site/
+        cp src/summary_species.csv _site/
+        cp src/summary_modalities.csv _site/
+
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@v3
+      with:
+        path: _site
+
+  deploy:
+    needs: upload
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4

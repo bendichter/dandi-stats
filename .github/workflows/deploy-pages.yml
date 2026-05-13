@@ -3,6 +3,9 @@ name: Build stats and deploy to GitHub Pages
 on:
   schedule:
     - cron: "0 2 * * *"
+  push:
+    branches:
+      - dev
   workflow_dispatch:
 
 permissions:
